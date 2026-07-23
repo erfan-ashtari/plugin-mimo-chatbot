@@ -256,6 +256,7 @@ module.exports = {
                 push({ thinkingUpdate: thinkingText });
               } else if (ev.type === 'text' && ev.part && ev.part.text) {
                 responseText += ev.part.text;
+                push({ textUpdate: responseText });
               } else if (ev.type === 'tool_use' && ev.part && ev.part.tool) {
                 const toolName = ev.part.tool;
                 console.log('[mimo-chatbot] Tool:', toolName);

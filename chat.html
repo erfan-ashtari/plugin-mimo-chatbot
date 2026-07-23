@@ -351,7 +351,17 @@ window.addEventListener('message', event => {
     appendReasoning(s.thinkingUpdate);
   }
 
-  // Assistant answer
+  // Streaming answer text
+  if (s.textUpdate !== undefined) {
+    if (!currentBotRow) createBotContainer();
+    removeThinking();
+    clearActivity();
+    currentBotRow.bubble.style.display = 'block';
+    currentBotRow.bubble.textContent = s.textUpdate;
+    scrollToBottom();
+  }
+
+  // Assistant answer (final)
   if (s.assistantMessage) {
     appendAnswer(s.assistantMessage.content);
     // Finalize after showing answer
