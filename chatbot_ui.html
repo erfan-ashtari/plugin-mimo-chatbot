@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chatbot Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; /* slate-900 */
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            color: #f8fafc; /* slate-50 */
+        }
+
+        #chat-container {
+            width: 100%;
+            max-width: 800px;
+            height: 95vh;
+            background: #1e293b; /* slate-800 */
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid #334155; /* slate-700 */
+        }
+
+        .header {
+            padding: 1rem 1.5rem;
+            background: #1e293b;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .session-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .session-info.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .chat-body {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            scroll-behavior: smooth;
+        }
+
+        /* Hide scrollbar */
+        .chat-body::-webkit-scrollbar {
+            display: none;
+        }
+        .chat-body {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .message-row {
+            display: flex;
+            width: 100%;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .message-row.user {
+            justify-content: flex-end;
+        }
+
+        .message-row.bot {
+            justify-content: flex-start;
+            flex-direction: column;
+            align-items: flex-start;
+            max-width: 85%;
+        }
+
+        .bubble {
+            padding: 0.875rem 1.25rem;
+            border-radius: 18px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            max-width: 80%;
+            word-wrap: break-word;
+            position: relative;
+            white-space: pre-wrap; /* Preserves line breaks and spaces */
+        }
+
+        .bubble.user {
+            background-color: #3b82f6; /* blue-500 */
+            color: white;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        }
+
+        .bubble.bot {
+            background-color: #334155; /* slate-700 */
+            color: #f8fafc; /* slate-50 */
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Compact thinking bubble styling */
+        .thinking-bubble {
+            padding: 0.4rem 0.8rem !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            width: fit-content !important;
+            min-height: unset !important;
+            line-height: 1 !important;
+        }
+
+        .reasoning-container {
+            margin-bottom: 0.5rem;
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #334155; /* slate-700 */
+            background: #0f172a; /* slate-900 */
+        }
+
+        .reasoning-header {
+            padding: 0.5rem 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: #94a3b8; /* slate-400 */
+            background: #1e293b; /* slate-800 */
+            transition: background 0.2s;
+        }
+
+        .reasoning-header:hover {
+            background: #334155; /* slate-700 */
+        }
+
+        .reasoning-header i {
+            transition: transform 0.3s ease;
+        }
+
+        .reasoning-header.expanded i {
+            transform: rotate(180deg);
+        }
+
+        .reasoning-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-out, padding 0.4s ease-out;
+            font-size: 0.85rem;
+            color: #cbd5e1; /* slate-300 */
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .reasoning-content.expanded {
+            max-height: 500px;
+            padding: 1rem;
+            border-top: 1px solid #334155; /* slate-700 */
+            overflow-y: auto;
+        }
+
+        .thinking-indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 0;
+            min-height: auto;
+            height: 20px;
+        }
+
+        .dot {
+            width: 7px;
+            height: 7px;
+            background-color: #94a3b8; /* slate-400 */
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .dot:nth-child(1) { animation-delay: -0.32s; }
+        .dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .input-area {
+            padding: 1rem 1.5rem;
+            background: #1e293b; /* slate-800 */
+            border-top: 1px solid #334155; /* slate-700 */
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            background: #0f172a; /* slate-900 */
+            border: 1px solid #334155; /* slate-700 */
+            border-radius: 24px;
+            padding: 0.5rem 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .input-wrapper:focus-within {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+            background: #1e293b; /* slate-800 */
+        }
+
+        .chat-input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 0.5rem;
+            font-size: 1rem;
+            outline: none;
+            resize: none;
+            max-height: 120px;
+            min-height: 40px;
+            font-family: inherit;
+            color: #f8fafc; /* slate-50 */
+        }
+        
+        .chat-input::placeholder {
+            color: #64748b; /* slate-500 */
+        }
+
+        .send-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        .send-btn:hover {
+            background: #2563eb;
+        }
+
+        .send-btn:active {
+            transform: scale(0.95);
+        }
+
+        .send-btn:disabled {
+            background: #475569; /* slate-600 */
+            color: #94a3b8; /* slate-400 */
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .send-btn.stop-mode {
+            background: #ef4444; /* red-500 */
+            border-radius: 12px;
+        }
+
+        .send-btn.stop-mode:hover {
+            background: #dc2626; /* red-600 */
+        }
+    </style>
+</head>
+<body>
+
+    <div id="chat-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="session-info" id="session-info">
+                <span class="bg-blue-900/40 text-blue-300 border border-blue-800/50 text-xs font-semibold px-2.5 py-0.5 rounded flex items-center gap-2">
+                    <i class="fa-solid fa-fingerprint"></i>
+                    <span id="session-id-text">ses_...</span>
+                </span>
+            </div>
+            <div class="actions flex items-center gap-3">
+                <button id="clear-btn" class="text-slate-400 hover:text-red-400 transition-colors tooltip relative group" title="Clear Chat">
+                    <i class="fa-solid fa-trash-can text-lg"></i>
+                    <span class="absolute top-full right-0 mt-2 px-2 py-1 bg-slate-800 text-slate-100 border border-slate-700 text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-lg">Clear Chat</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Chat Body -->
+        <div class="chat-body" id="chat-body">
+            <!-- Welcome message -->
+            <div class="message-row bot welcome-msg">
+                <div class="bubble bot">Hello! I am an AI assistant. How can I help you today?</div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="input-area">
+            <div class="input-wrapper">
+                <textarea id="chat-input" class="chat-input" placeholder="Type your message here..." rows="1"></textarea>
+                <div class="flex items-center gap-1.5 ml-2 flex-shrink-0">
+                    <button id="summarize-btn" class="text-slate-400 hover:text-purple-400 transition-colors p-2 rounded-full hover:bg-slate-800 focus:outline-none" title="Summarize Chat">
+                        <i class="fa-solid fa-wand-magic-sparkles text-sm"></i>
+                    </button>
+                    <button id="send-btn" class="send-btn" title="Send Message">
+                        <i class="fa-solid fa-paper-plane text-xs"></i>
+                    </button>
+                </div>
+            </div>
+            <!-- File Attachment Display -->
+            <div class="mt-3 flex items-center text-xs text-slate-400 bg-slate-900/60 border border-slate-700/50 w-fit px-3 py-1.5 rounded-lg gap-2 font-mono shadow-sm">
+                <i class="fa-solid fa-file-code text-blue-400"></i>
+                <span class="text-slate-200 font-semibold">3.md</span>
+                <span class="text-slate-500 opacity-70">— D:\Users\Downloads</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chatBody = document.getElementById('chat-body');
+        const chatInput = document.getElementById('chat-input');
+        const sendBtn = document.getElementById('send-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const summarizeBtn = document.getElementById('summarize-btn');
+        const sessionInfo = document.getElementById('session-info');
+        const sessionIdText = document.getElementById('session-id-text');
+
+        let isProcessing = false;
+        let shouldStop = false;
+        let currentBotRow = null; 
+
+        // Auto-resize textarea
+        chatInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+            if (!isProcessing) {
+                sendBtn.disabled = this.value.trim() === '';
+            }
+        });
+
+        // Handle shift+enter for new line and enter to send
+        chatInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (!isProcessing && this.value.trim() !== '') sendMessage();
+            }
+        });
+
+        sendBtn.addEventListener('click', () => {
+            if (isProcessing) {
+                shouldStop = true;
+            } else {
+                sendMessage();
+            }
+        });
+
+        clearBtn.addEventListener('click', clearChat);
+        
+        summarizeBtn.addEventListener('click', () => {
+            if (isProcessing) return;
+            shouldStop = false;
+            const msg = "Please summarize the attached Document.";
+            appendUserMessage(msg);
+            
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+            setSendButtonState(true);
+            
+            simulateBackendProcess(msg);
+        });
+        
+        function setSendButtonState(processing) {
+            isProcessing = processing;
+            if (processing) {
+                sendBtn.innerHTML = '<i class="fa-solid fa-stop text-xs"></i>';
+                sendBtn.classList.add('stop-mode');
+                sendBtn.disabled = false;
+                sendBtn.title = 'Stop Generating';
+            } else {
+                sendBtn.innerHTML = '<i class="fa-solid fa-paper-plane text-xs"></i>';
+                sendBtn.classList.remove('stop-mode');
+                sendBtn.disabled = chatInput.value.trim() === '';
+                sendBtn.title = 'Send Message';
+            }
+        }
+
+        function sendMessage() {
+            const message = chatInput.value.trim();
+            if (message === '' || isProcessing) return;
+
+            shouldStop = false;
+            appendUserMessage(message);
+
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+            setSendButtonState(true);
+
+            simulateBackendProcess(message);
+        }
+
+        function appendUserMessage(text) {
+            const row = document.createElement('div');
+            row.className = 'message-row user';
+            
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble user';
+            bubble.textContent = text;
+            
+            row.appendChild(bubble);
+            chatBody.appendChild(row);
+            scrollToBottom();
+        }
+
+        function createBotMessageContainer() {
+            const row = document.createElement('div');
+            row.className = 'message-row bot';
+            
+            const reasoningContainer = document.createElement('div');
+            reasoningContainer.className = 'reasoning-container';
+            reasoningContainer.style.display = 'none'; 
+            
+            const reasoningHeader = document.createElement('div');
+            reasoningHeader.className = 'reasoning-header';
+            reasoningHeader.innerHTML = `
+                <span class="flex items-center gap-2">
+                    <i class="fa-solid fa-brain text-purple-400"></i> Thinking Process
+                </span>
+                <i class="fa-solid fa-chevron-down"></i>
+            `;
+            
+            const reasoningContent = document.createElement('div');
+            reasoningContent.className = 'reasoning-content';
+            
+            reasoningHeader.addEventListener('click', () => {
+                reasoningHeader.classList.toggle('expanded');
+                reasoningContent.classList.toggle('expanded');
+                setTimeout(scrollToBottom, 300);
+            });
+            
+            reasoningContainer.appendChild(reasoningHeader);
+            reasoningContainer.appendChild(reasoningContent);
+            
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble bot';
+            bubble.style.display = 'none'; 
+            
+            row.appendChild(reasoningContainer);
+            row.appendChild(bubble);
+            chatBody.appendChild(row);
+            
+            currentBotRow = {
+                row: row,
+                reasoningContainer: reasoningContainer,
+                reasoningContent: reasoningContent,
+                bubble: bubble
+            };
+            
+            scrollToBottom();
+        }
+
+        function showThinking() {
+            if (!currentBotRow) return;
+            
+            const thinkingDiv = document.createElement('div');
+            thinkingDiv.className = 'bubble bot thinking-bubble';
+            thinkingDiv.id = 'current-thinking';
+            thinkingDiv.innerHTML = `
+                <div class="thinking-indicator">
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                </div>
+            `;
+            
+            currentBotRow.row.appendChild(thinkingDiv);
+            scrollToBottom();
+        }
+
+        function removeThinking() {
+            const thinkingDiv = document.getElementById('current-thinking');
+            if (thinkingDiv) {
+                thinkingDiv.remove();
+            }
+        }
+
+        async function streamText(element, text, speed = 15) {
+            element.style.display = 'block'; 
+            element.textContent = ''; 
+            
+            const chunks = text.split(' '); 
+            
+            for (let i = 0; i < chunks.length; i++) {
+                if (shouldStop) break;
+                element.textContent += chunks[i] + (i < chunks.length - 1 ? ' ' : '');
+                scrollToBottom();
+                await new Promise(resolve => setTimeout(resolve, speed));
+            }
+        }
+
+        async function breakableDelay(ms) {
+            const steps = ms / 50;
+            for (let i = 0; i < steps; i++) {
+                if (shouldStop) break;
+                await new Promise(r => setTimeout(r, 50));
+            }
+        }
+
+        async function simulateBackendProcess(userMessage) {
+            const mockJsonData = [
+                {
+                    "type": "step_start",
+                    "timestamp": 1784825924679,
+                    "sessionID": "ses_07015d7ffffeEcYtjtfJd61zft",
+                    "part": {"type": "step-start"}
+                },
+                {
+                    "type": "reasoning",
+                    "timestamp": 1784825926171,
+                    "sessionID": "ses_07015d7ffffeEcYtjtfJd61zft",
+                    "part": {
+                        "type": "reasoning",
+                        "text": "The user sent a message.\nLet me think about how to respond appropriately.\n\n1. Analyze the context\n2. Formulate a friendly greeting\n3. Offer assistance"
+                    }
+                },
+                {
+                    "type": "text",
+                    "timestamp": 1784825926353,
+                    "sessionID": "ses_07015d7ffffeEcYtjtfJd61zft",
+                    "part": {
+                        "type": "text",
+                        "text": "Hey! How can I help you today?\nWhat would you like to work on?"
+                    }
+                },
+                {
+                    "type": "step_finish",
+                    "timestamp": 1784825927051,
+                    "sessionID": "ses_07015d7ffffeEcYtjtfJd61zft",
+                    "part": {"type": "step-finish"}
+                }
+            ];
+
+            try {
+                createBotMessageContainer();
+
+                await breakableDelay(500);
+                if (shouldStop) return;
+
+                for (const item of mockJsonData) {
+                    if (shouldStop) break;
+                    
+                    if (item.sessionID && !sessionInfo.classList.contains('visible')) {
+                        sessionIdText.textContent = item.sessionID.substring(0, 15) + '...';
+                        sessionInfo.classList.add('visible');
+                    }
+
+                    switch (item.type) {
+                        case 'step_start':
+                            showThinking();
+                            await breakableDelay(1000);
+                            break;
+
+                        case 'reasoning':
+                            if (currentBotRow && currentBotRow.reasoningContainer) {
+                                currentBotRow.reasoningContainer.style.display = 'block';
+                                await streamText(currentBotRow.reasoningContent, item.part.text, 10);
+                            }
+                            await breakableDelay(800);
+                            break;
+
+                        case 'text':
+                            removeThinking();
+                            if (currentBotRow && currentBotRow.bubble) {
+                                await streamText(currentBotRow.bubble, item.part.text, 30);
+                            }
+                            break;
+
+                        case 'step_finish':
+                            break;
+                    }
+                }
+            } catch (error) {
+                console.error("Chat processing error:", error);
+            } finally {
+                finalizeStop();
+            }
+        }
+
+        function finalizeStop() {
+            removeThinking();
+            setSendButtonState(false);
+            currentBotRow = null;
+        }
+
+        function scrollToBottom() {
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+
+        function clearChat() {
+            const messages = document.querySelectorAll('.message-row:not(.welcome-msg)');
+            messages.forEach(msg => msg.remove());
+            
+            sessionInfo.classList.remove('visible');
+            setTimeout(() => {
+                sessionIdText.textContent = 'ses_...';
+            }, 400); 
+
+            shouldStop = true;
+            finalizeStop();
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+        }
+
+    </script>
+</body>
+</html>

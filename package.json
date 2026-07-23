@@ -1,0 +1,8 @@
+{
+  "name": "plugin-mimo-chatbot",
+  "displayName": "MiMo Chatbot",
+  "version": "1.0.0",
+  "description": "AI chatbot powered by MiMoCode with file context awareness, streaming responses, and summarize functionality",
+  "main": "index.js",
+  "activationEvents": ["onStartup"]
+}
