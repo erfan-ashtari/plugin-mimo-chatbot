@@ -5,7 +5,7 @@ module.exports = {
   _state: null,
 
   activate(context) {
-    console.log('[mimo-chatbot] ===== ACTIVATED =====');
+    // console.log('[mimo-chatbot] ===== ACTIVATED =====');
 
     const pluginDir = __dirname;
     const state = { chatHistory: [], isProcessing: false, currentProcess: null, sessionId: null };
@@ -92,16 +92,16 @@ module.exports = {
         ? `The user wants you to use tools/research. You may use file operations, web search, and other tools as needed.\n\nUser message: ${text}`
         : (isFirstMessage ? `${SYSTEM_PROMPT}\nUser message: ${text}` : text);
 
-      console.log('[mimo-chatbot] ── PROMPT ──');
-      console.log('[mimo-chatbot] User:', text);
-      console.log('[mimo-chatbot] Full prompt:', fullPrompt.substring(0, 500) + (fullPrompt.length > 500 ? '...' : ''));
-      console.log('[mimo-chatbot] Tools:', useTools ? 'FULL (--dangerously-skip-permissions)' : 'NONE (--pure)');
+      // console.log('[mimo-chatbot] ── PROMPT ──');
+      // console.log('[mimo-chatbot] User:', text);
+      // console.log('[mimo-chatbot] Full prompt:', fullPrompt.substring(0, 500) + (fullPrompt.length > 500 ? '...' : ''));
+      // console.log('[mimo-chatbot] Tools:', useTools ? 'FULL (--dangerously-skip-permissions)' : 'NONE (--pure)');
 
       try {
         const result = await executeMimo(fullPrompt, useTools);
-        console.log('[mimo-chatbot] ── RESPONSE ──');
-        console.log('[mimo-chatbot] Thinking:', result.thinking ? result.thinking.substring(0, 300) + (result.thinking.length > 300 ? '...' : '') : '(none)');
-        console.log('[mimo-chatbot] Answer:', result.text.substring(0, 500) + (result.text.length > 500 ? '...' : ''));
+        // console.log('[mimo-chatbot] ── RESPONSE ──');
+        // console.log('[mimo-chatbot] Thinking:', result.thinking ? result.thinking.substring(0, 300) + (result.thinking.length > 300 ? '...' : '') : '(none)');
+        // console.log('[mimo-chatbot] Answer:', result.text.substring(0, 500) + (result.text.length > 500 ? '...' : ''));
         const assistantMsg = { role: 'assistant', content: result.text, thinking: result.thinking, timestamp: new Date().toLocaleTimeString() };
         state.chatHistory.push(assistantMsg);
         push({ assistantMessage: assistantMsg, isProcessing: false });
@@ -133,17 +133,19 @@ module.exports = {
 
       state.isProcessing = true;
       push({ userMessage: userMsg, isProcessing: true, stepStart: true });
+	  
+	  const cleanPath = /[\/\\]\.current-dir$/.test(f.filePath) ? f.filePath.replace(/[\/\\]\.current-dir$/, '').replace(/\\/g, '/') : f.filePath;
+	  
+      const prompt = 'Please provide a comprehensive summary of the file (or directory) at "' + cleanPath + '". Include: (1) Key points, (2) Structure, (3) Conclusions, (4) Notable code patterns if code. Be thorough but concise.';
 
-      const prompt = 'Please provide a comprehensive summary of the file at "' + f.filePath + '". Include: (1) Key points, (2) Structure, (3) Conclusions, (4) Notable code patterns if code. Be thorough but concise.';
-
-      console.log('[mimo-chatbot] ── SUMMARIZE ──');
-      console.log('[mimo-chatbot] File:', f.filePath);
+      // console.log('[mimo-chatbot] ── SUMMARIZE ──');
+      // console.log('[mimo-chatbot] File:', f.filePath);
 
       try {
         const result = await executeMimo(prompt, true);
-        console.log('[mimo-chatbot] ── RESPONSE ──');
-        console.log('[mimo-chatbot] Thinking:', result.thinking ? result.thinking.substring(0, 300) + '...' : '(none)');
-        console.log('[mimo-chatbot] Answer:', result.text.substring(0, 500) + (result.text.length > 500 ? '...' : ''));
+        // console.log('[mimo-chatbot] ── RESPONSE ──');
+        // console.log('[mimo-chatbot] Thinking:', result.thinking ? result.thinking.substring(0, 300) + '...' : '(none)');
+        // console.log('[mimo-chatbot] Answer:', result.text.substring(0, 500) + (result.text.length > 500 ? '...' : ''));
         const assistantMsg = { role: 'assistant', content: result.text, thinking: result.thinking, timestamp: new Date().toLocaleTimeString() };
         state.chatHistory.push(assistantMsg);
         push({ assistantMessage: assistantMsg, isProcessing: false });
@@ -162,30 +164,30 @@ module.exports = {
     const handleStop = () => {
       if (state.currentProcess) {
         const pid = state.currentProcess.pid;
-        console.log('[mimo-chatbot] >>> STOP REQUESTED, pid:', pid);
+        // console.log('[mimo-chatbot] >>> STOP REQUESTED, pid:', pid);
         state.killed = true;
         try {
           if (process.platform === 'win32') {
             const { execSync } = require('child_process');
-            console.log('[mimo-chatbot] Executing: taskkill /T /F /PID', pid);
+            // console.log('[mimo-chatbot] Executing: taskkill /T /F /PID', pid);
             execSync('taskkill /T /F /PID ' + pid, { stdio: 'pipe' });
-            console.log('[mimo-chatbot] >>> PROCESS KILLED, pid:', pid);
+            // console.log('[mimo-chatbot] >>> PROCESS KILLED, pid:', pid);
           } else {
             process.kill(-pid, 'SIGTERM');
-            console.log('[mimo-chatbot] >>> PROCESS KILLED (SIGTERM), pid:', pid);
+            // console.log('[mimo-chatbot] >>> PROCESS KILLED (SIGTERM), pid:', pid);
           }
         } catch (e) {
           console.warn('[mimo-chatbot] Kill failed, trying SIGKILL:', e.message);
           try {
             state.currentProcess.kill('SIGKILL');
-            console.log('[mimo-chatbot] >>> PROCESS KILLED (SIGKILL), pid:', pid);
+            // console.log('[mimo-chatbot] >>> PROCESS KILLED (SIGKILL), pid:', pid);
           } catch (e2) {
             console.error('[mimo-chatbot] >>> KILL FAILED:', e2.message);
           }
         }
         state.currentProcess = null;
       } else {
-        console.log('[mimo-chatbot] No process to stop');
+        // console.log('[mimo-chatbot] No process to stop');
       }
     };
 
@@ -215,7 +217,7 @@ module.exports = {
         }
 
 		args.push(userMessage)
-        console.log('[mimo-chatbot] Spawning:', args.slice(0, 100).join(' '));
+        // console.log('[mimo-chatbot] Spawning:', args.slice(0, 100).join(' '));
 
         const isWin = process.platform === 'win32';
         const proc = spawn(isWin ? 'cmd.exe' : 'mimo', isWin ? ['/c', 'mimo.cmd', ...args] : args, {
@@ -239,7 +241,7 @@ module.exports = {
             if (!trimmed) continue;
             try {
               const ev = JSON.parse(trimmed);
-              console.log('[mimo-chatbot] JSON:', JSON.stringify(ev));
+              // console.log('[mimo-chatbot] JSON:', JSON.stringify(ev));
 
               // Extract session ID
               if (ev.sessionID && !state.sessionId) {
@@ -248,7 +250,7 @@ module.exports = {
               }
 
               if (ev.type === 'step_start') {
-                console.log('[mimo-chatbot] Step started');
+                // console.log('[mimo-chatbot] Step started');
                 activityLog = [];
                 push({ stepStart: true });
               } else if (ev.type === 'reasoning' && ev.part && ev.part.text) {
@@ -259,11 +261,11 @@ module.exports = {
                 push({ textUpdate: responseText });
               } else if (ev.type === 'tool_use' && ev.part && ev.part.tool) {
                 const toolName = ev.part.tool;
-                console.log('[mimo-chatbot] Tool:', toolName);
+                // console.log('[mimo-chatbot] Tool:', toolName);
                 activityLog.push(toolName);
                 push({ activityUpdate: activityLog.slice() });
               } else if (ev.type === 'step_finish') {
-                console.log('[mimo-chatbot] Step finished');
+                // console.log('[mimo-chatbot] Step finished');
                 push({ stepFinish: true });
               }
             } catch (_) {}
@@ -272,7 +274,7 @@ module.exports = {
 
         proc.stderr.on('data', (c) => {
           const t = c.toString().trim();
-          if (t) console.log('[mimo-chatbot] stderr:', t.substring(0, 200));
+          // if (t) console.log('[mimo-chatbot] stderr:', t.substring(0, 200));
         });
 
         proc.on('close', (code) => {
@@ -287,7 +289,7 @@ module.exports = {
           // User stopped the process — only show actual answer, not thinking
           if (state.killed) {
             state.killed = false;
-            console.log('[mimo-chatbot] >>> Process exited after kill, code:', code);
+            // console.log('[mimo-chatbot] >>> Process exited after kill, code:', code);
             resolve({ text: responseText ? responseText + '\n\n[Stopped]' : '[Stopped]', thinking: thinkingText });
             return;
           }
@@ -308,7 +310,7 @@ module.exports = {
       });
     };
 
-    console.log('[mimo-chatbot] ===== INITIALIZED =====');
+    // console.log('[mimo-chatbot] ===== INITIALIZED =====');
   },
 
   deactivate() {
@@ -316,6 +318,6 @@ module.exports = {
       if (this._state.currentProcess) try { this._state.currentProcess.kill(); } catch (_) {}
     }
     this._state = null;
-    console.log('[mimo-chatbot] Deactivated');
+    // console.log('[mimo-chatbot] Deactivated');
   },
 };
