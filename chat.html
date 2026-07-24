@@ -312,6 +312,11 @@ window.addEventListener('message', event => {
   if (!s) return;
 
   // File context
+  console.log('[mimo-chatbot] File:', s.fileName);
+  console.log('[mimo-chatb	ot] File:', s.dirPath);
+  //console.log('[mimo-chatbot] File:', s.dirPath);
+  
+  
   if (s.fileName !== undefined) {
     const fc = document.getElementById('fileCtx');
     if (s.fileName && s.fileName !== 'null') {

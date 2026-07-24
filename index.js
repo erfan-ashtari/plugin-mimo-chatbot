@@ -8,16 +8,25 @@ module.exports = {
     // console.log('[mimo-chatbot] ===== ACTIVATED =====');
 
     const pluginDir = __dirname;
-    const state = { chatHistory: [], isProcessing: false, currentProcess: null, sessionId: null };
+    const state = { chatHistory: [], isProcessing: false, currentProcess: null, sessionId: null , activeFile: null};
     this._state = state;
 
     const push = (updates) => context.updateElementState({ 'chat-iframe': updates });
     const getFile = () => context.currentFile;
+	
+	const cleanFilePath = (filePath) => {
+	  if (!filePath) return null;
+	  return filePath.replace(/[\/\\]\.current-dir$/, '').replace(/\\/g, '/');
+	};
 
     const pushFileContext = () => {
       const f = getFile();
-      push({ fileName: f ? f.fileName : null, dirPath: f ? f.dirPath : '' });
-    };
+	  if (f) {
+		state.activeFile = f;
+	  }
+	  const current = state.activeFile;
+      push({ fileName: current ? current.fileName : null, dirPath: current ? current.dirPath : '' });
+	};
 
     // ─── Register Panel ───────────────────────────────────────────
     context.registerSidebarPanel({
@@ -119,7 +128,8 @@ module.exports = {
     // ─── Handle Summarize ─────────────────────────────────────────
     const handleSummarize = async () => {
       if (state.isProcessing) return;
-      const f = getFile();
+      // const f = getFile();
+	  const f = state.activeFile;
       if (!f) {
         const m = { role: 'assistant', content: 'No file open.', timestamp: new Date().toLocaleTimeString() };
         state.chatHistory.push(m);
@@ -134,9 +144,9 @@ module.exports = {
       state.isProcessing = true;
       push({ userMessage: userMsg, isProcessing: true, stepStart: true });
 	  
-	  const cleanPath = /[\/\\]\.current-dir$/.test(f.filePath) ? f.filePath.replace(/[\/\\]\.current-dir$/, '').replace(/\\/g, '/') : f.filePath;
-	  
-      const prompt = 'Please provide a comprehensive summary of the file (or directory) at "' + cleanPath + '". Include: (1) Key points, (2) Structure, (3) Conclusions, (4) Notable code patterns if code. Be thorough but concise.';
+	  //const cleanPath = /[\/\\]\.current-dir$/.test(f.filePath) ? f.filePath.replace(/[\/\\]\.current-dir$/, '').replace(/\\/g, '/') : f.filePath;
+	  const filePathClean = f ? cleanFilePath(f.filePath) : null;
+      const prompt = 'Please provide a comprehensive summary of the file (or directory) at "' + filePathClean + '". Include: (1) Key points, (2) Structure, (3) Conclusions, (4) Notable code patterns if code. Be thorough but concise.';
 
       // console.log('[mimo-chatbot] ── SUMMARIZE ──');
       // console.log('[mimo-chatbot] File:', f.filePath);
@@ -194,12 +204,18 @@ module.exports = {
     // ─── Execute Mimo (streams thinking updates) ──────────────────
     const executeMimo = (userMessage, useTools = false) => {
       return new Promise((resolve, reject) => {
-        const f = getFile();
+        // const f = getFile();
+		const f = state.activeFile;
         const args = ['run', '--format', 'json', '--thinking', '--agent', 'compose'];
 
         const workDir = (f && f.dirPath) || process.cwd();
         args.push('--dir', workDir);
 		if (f&& !f.filePath.includes('.current-dir')) args.push('--file', f.filePath);
+		
+		// const filePathClean = f ? cleanFilePath(f.filePath) : null;
+		// if (filePathClean) {
+		  // args.push('--file', filePathClean);
+		// }
 		
         if (useTools) {
           // Full experience: plugins, skills, file access
